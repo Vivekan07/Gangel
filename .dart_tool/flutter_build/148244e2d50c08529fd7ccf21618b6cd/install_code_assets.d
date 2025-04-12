@@ -1,0 +1,1 @@
+ D:\\gangel\\.dart_tool\\flutter_build\\148244e2d50c08529fd7ccf21618b6cd\\native_assets.json: 

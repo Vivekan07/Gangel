@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "407655520509",
+    "firebase_url": "https://ganagel-95192-default-rtdb.firebaseio.com",
+    "project_id": "ganagel-95192",
+    "storage_bucket": "ganagel-95192.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:407655520509:android:e1179f955ff6e8b6bf8694",
+        "android_client_info": {
+          "package_name": "com.example.gangel"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQedaIxI4qoWBdCk6huYIeI-K9Ud-lzDI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

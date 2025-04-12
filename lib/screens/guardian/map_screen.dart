@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:gangel/screens/guardian/messages_screen.dart';
+import 'package:gangel/screens/guardian/guardian_messages_screen.dart' show ChatScreen;
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});

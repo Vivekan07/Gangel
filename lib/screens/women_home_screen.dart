@@ -6,7 +6,9 @@ import 'women/profile_management_screen.dart';
 import 'women/police_management_screen.dart';
 
 class WomenHomeScreen extends StatefulWidget {
-  const WomenHomeScreen({super.key});
+  final Map<String, dynamic> userData;
+  
+  const WomenHomeScreen({super.key, required this.userData});
 
   @override
   State<WomenHomeScreen> createState() => _WomenHomeScreenState();
@@ -14,6 +16,15 @@ class WomenHomeScreen extends StatefulWidget {
 
 class _WomenHomeScreenState extends State<WomenHomeScreen> {
   int _selectedIndex = 0;
+  late String _userName;
+  String? _profileImageUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _userName = widget.userData['name'] ?? 'User';
+    _profileImageUrl = widget.userData['profileImageUrl'];
+  }
 
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
@@ -70,7 +81,7 @@ class _WomenHomeScreenState extends State<WomenHomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const ProfileManagementScreen(),
+                      builder: (context) => ProfileManagementScreen(userData: widget.userData),
                     ),
                   );
                 },
@@ -93,8 +104,19 @@ class _WomenHomeScreenState extends State<WomenHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
+        title: Text('Welcome, $_userName'),
         actions: [
+          if (_profileImageUrl != null)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: GestureDetector(
+                onTap: _showProfileMenu,
+                child: CircleAvatar(
+                  backgroundImage: NetworkImage(_profileImageUrl!),
+                ),
+              ),
+            )
+          else
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: _showProfileMenu,

@@ -1,7 +1,14 @@
-import 'package:flutter/material.dart';
+   import 'package:flutter/material.dart';
+import '../../services/user_service.dart';
+import '../../services/storage_service.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfileManagementScreen extends StatefulWidget {
-  const ProfileManagementScreen({super.key});
+  final Map<String, dynamic> userData;
+  
+  const ProfileManagementScreen({super.key, required this.userData});
 
   @override
   State<ProfileManagementScreen> createState() => _ProfileManagementScreenState();
@@ -9,11 +16,31 @@ class ProfileManagementScreen extends StatefulWidget {
 
 class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
   final _formKey = GlobalKey<FormState>();
-  String? _profileImagePath;
-  final _nameController = TextEditingController(text: 'John');
-  final _emailController = TextEditingController(text: 'jane@example.com');
-  final _phoneController = TextEditingController(text: '+1234567890');
-  final _addressController = TextEditingController(text: '123 Safety Street');
+  final _userService = UserService();
+  final _storageService = StorageService();
+  final _imagePicker = ImagePicker();
+  File? _profileImage;
+  String? _profileImageUrl;
+  bool _isLoading = false;
+  
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+  
+  void _loadUserData() {
+    _nameController.text = widget.userData['name'] ?? '';
+    _emailController.text = widget.userData['email'] ?? '';
+    _phoneController.text = widget.userData['phone'] ?? '';
+    _addressController.text = widget.userData['address'] ?? '';
+    _profileImageUrl = widget.userData['profileImageUrl'];
+  }
 
   @override
   void dispose() {
@@ -35,23 +62,37 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
             ListTile(
               leading: const Icon(Icons.camera_alt),
               title: const Text('Take Photo'),
-              onTap: () {
-                // Mock camera functionality
-                setState(() {
-                  _profileImagePath = 'mock_camera_image.jpg';
-                });
+              onTap: () async {
                 Navigator.pop(context);
+                final XFile? image = await _imagePicker.pickImage(
+                  source: ImageSource.camera,
+                  maxWidth: 512,
+                  maxHeight: 512,
+                  imageQuality: 75,
+                );
+                if (image != null && mounted) {
+                  setState(() {
+                    _profileImage = File(image.path);
+                  });
+                }
               },
             ),
             ListTile(
               leading: const Icon(Icons.photo_library),
               title: const Text('Choose from Gallery'),
-              onTap: () {
-                // Mock gallery functionality
-                setState(() {
-                  _profileImagePath = 'mock_gallery_image.jpg';
-                });
+              onTap: () async {
                 Navigator.pop(context);
+                final XFile? image = await _imagePicker.pickImage(
+                  source: ImageSource.gallery,
+                  maxWidth: 512,
+                  maxHeight: 512,
+                  imageQuality: 75,
+                );
+                if (image != null && mounted) {
+                  setState(() {
+                    _profileImage = File(image.path);
+                  });
+                }
               },
             ),
           ],
@@ -70,63 +111,149 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
   }
 
   void _showChangePasswordDialog() {
-    final currentPasswordController = TextEditingController();
-    final newPasswordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
+    final TextEditingController currentPasswordController = TextEditingController();
+    final TextEditingController newPasswordController = TextEditingController();
+    final TextEditingController confirmPasswordController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Change Password'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: currentPasswordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Current Password',
-                border: OutlineInputBorder(),
-              ),
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Change Password'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: currentPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(labelText: 'Current Password'),
+                ),
+                TextField(
+                  controller: newPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(labelText: 'New Password'),
+                ),
+                TextField(
+                  controller: confirmPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(labelText: 'Confirm New Password'),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: newPasswordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'New Password',
-                border: OutlineInputBorder(),
-              ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: confirmPasswordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Confirm New Password',
-                border: OutlineInputBorder(),
-              ),
+            TextButton(
+              onPressed: () async {
+                // Validate password match
+                if (newPasswordController.text != confirmPasswordController.text) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('New passwords do not match')),
+                  );
+                  return;
+                }
+
+                // Validate password length
+                if (newPasswordController.text.length < 6) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Password must be at least 6 characters')),
+                  );
+                  return;
+                }
+
+                try {
+                  // Get current user data to verify password
+                  final userDoc = await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(widget.userData['id'])
+                      .get();
+                  
+                  if (!userDoc.exists) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('User not found')),
+                    );
+                    return;
+                  }
+
+                  final userData = userDoc.data() as Map<String, dynamic>;
+                  final storedPassword = userData['password'] as String?;
+
+                  // Verify current password
+                  if (storedPassword != currentPasswordController.text) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Current password is incorrect')),
+                    );
+                    return;
+                  }
+
+                  // Update password
+                  await _userService.updateUserProfile(
+                    userId: widget.userData['id'],
+                    password: newPasswordController.text,
+                  );
+
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Password updated successfully')),
+                  );
+                } catch (e) {
+                  print('Error updating password: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to update password')),
+                  );
+                }
+              },
+              child: Text('Update'),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Mock password change
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Password updated successfully')),
-              );
-              Navigator.pop(context);
-            },
-            child: const Text('Update'),
-          ),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      final userId = widget.userData['id'] ?? '';
+      if (userId.isEmpty) {
+        throw Exception('User ID not found');
+      }
+      
+      await _userService.updateUserProfile(
+        userId: userId,
+        name: _nameController.text,
+        phone: _phoneController.text,
+        address: _addressController.text,
+        profileImagePath: _profileImage?.path,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating profile: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -147,9 +274,21 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                   CircleAvatar(
                     radius: 60,
                     backgroundColor: Colors.grey[200],
-                    child: _profileImagePath != null
-                        ? const Icon(Icons.person, size: 80)
-                        : const Icon(Icons.person, size: 80),
+                    child: _profileImage != null
+                        ? Image.file(
+                            _profileImage!,
+                            width: 120,
+                            height: 120,
+                            fit: BoxFit.cover,
+                          )
+                        : _profileImageUrl != null
+                            ? Image.network(
+                                _profileImageUrl!,
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.cover,
+                              )
+                            : const Icon(Icons.person, size: 80),
                   ),
                   FloatingActionButton.small(
                     onPressed: _showImagePicker,
@@ -232,14 +371,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    // Mock save profile
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Profile updated successfully')),
-                    );
-                  }
-                },
+                onPressed: _saveProfile,
                 child: const Text('Save Changes'),
               ),
             ],

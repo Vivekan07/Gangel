@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'guardian/messages_screen.dart';
+import 'guardian/guardian_messages_screen.dart';
 import 'guardian/map_screen.dart';
 import 'guardian/profile_management_screen.dart';
 import 'guardian/alert_management_screen.dart';
 
 class GuardianHomeScreen extends StatefulWidget {
-  const GuardianHomeScreen({super.key});
+  final Map<String, dynamic> userData;
+  
+  const GuardianHomeScreen({super.key, required this.userData});
 
   @override
   State<GuardianHomeScreen> createState() => _GuardianHomeScreenState();
@@ -13,6 +15,15 @@ class GuardianHomeScreen extends StatefulWidget {
 
 class _GuardianHomeScreenState extends State<GuardianHomeScreen> {
   int _selectedIndex = 0;
+  late String _userName;
+  String? _profileImageUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _userName = widget.userData['name'] ?? 'Guardian';
+    _profileImageUrl = widget.userData['profileImageUrl'];
+  }
 
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
@@ -40,7 +51,7 @@ class _GuardianHomeScreenState extends State<GuardianHomeScreen> {
         // Navigate to Profile screen
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const ProfileManagementScreen()),
+          MaterialPageRoute(builder: (context) => ProfileManagementScreen(userData: widget.userData)),
         );
         break;
     }
@@ -63,7 +74,7 @@ class _GuardianHomeScreenState extends State<GuardianHomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const ProfileManagementScreen(),
+                      builder: (context) => ProfileManagementScreen(userData: widget.userData),
                     ),
                   );
                 },
@@ -86,8 +97,19 @@ class _GuardianHomeScreenState extends State<GuardianHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Guardian Home'),
+        title: Text('Welcome, $_userName'),
         actions: [
+          if (_profileImageUrl != null)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: GestureDetector(
+                onTap: _showProfileMenu,
+                child: CircleAvatar(
+                  backgroundImage: NetworkImage(_profileImageUrl!),
+                ),
+              ),
+            )
+          else
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: _showProfileMenu,

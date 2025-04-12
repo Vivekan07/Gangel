@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'register_screen.dart';
 import 'women_home_screen.dart';
 import 'guardian_home_screen.dart';
@@ -15,8 +16,10 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   String _selectedUserType = 'Women';
   bool _obscurePassword = true;
+  bool _isLoading = false;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _firestore = FirebaseFirestore.instance;
 
   @override
   void dispose() {
@@ -25,20 +28,91 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _navigateToHomeScreen() {
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      print('Attempting to login with email: ${_emailController.text.trim()}');
+      
+      // Query Firestore to find users with matching email
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: _emailController.text.trim())
+          .where('userType', isEqualTo: _selectedUserType)
+          .get();
+
+      // Check if we found any users
+      if (querySnapshot.docs.isEmpty) {
+        print('No user found with this email and user type');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User not found. Please check your email and user type.')),
+          );
+        }
+        return;
+      }
+
+      // Get the first user document (should be only one with this email)
+      final userDoc = querySnapshot.docs.first;
+      final userData = userDoc.data();
+      
+      // Check if password matches
+      if (userData['password'] != _passwordController.text) {
+        print('Password does not match');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Incorrect password. Please try again.')),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+      
+      print('User found: ${userData['name']}');
+      
+      // Navigate to the appropriate home screen based on user type
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login successful!')),
+        );
+        _navigateToHomeScreen(userData);
+      }
+    } catch (e) {
+      print('Error during login: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _navigateToHomeScreen(Map<String, dynamic> userData) {
     Widget homeScreen;
     switch (_selectedUserType) {
       case 'Women':
-        homeScreen = const WomenHomeScreen();
+        homeScreen = WomenHomeScreen(userData: userData);
         break;
       case 'Guardian':
-        homeScreen = const GuardianHomeScreen();
+        homeScreen = GuardianHomeScreen(userData: userData);
         break;
       case 'Police':
-        homeScreen = const PoliceHomeScreen();
+        homeScreen = PoliceHomeScreen(userData: userData);
         break;
       default:
-        homeScreen = const WomenHomeScreen();
+        homeScreen = WomenHomeScreen(userData: userData);
     }
 
     Navigator.pushReplacement(
@@ -200,14 +274,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 30),
                           ElevatedButton(
-                            onPressed: () {
-                              if (_formKey.currentState!.validate()) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Processing Login...')),
-                                );
-                                _navigateToHomeScreen();
-                              }
-                            },
+                            onPressed: _isLoading ? null : _login,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue[600],
                               foregroundColor: Colors.white,
@@ -217,13 +284,22 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               elevation: 3,
                             ),
-                            child: const Text(
-                              'Login',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Login',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
                         ],
                       ),

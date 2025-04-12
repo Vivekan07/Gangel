@@ -4,7 +4,9 @@ import 'police/profile_management_screen.dart';
 import 'police/alert_management_screen.dart';
 
 class PoliceHomeScreen extends StatefulWidget {
-  const PoliceHomeScreen({super.key});
+  final Map<String, dynamic> userData;
+  
+  const PoliceHomeScreen({super.key, required this.userData});
 
   @override
   State<PoliceHomeScreen> createState() => _PoliceHomeScreenState();
@@ -19,11 +21,17 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
     });
   }
 
-  final List<Widget> _screens = [
-    const PoliceHomeContent(),
-    const AlertHistoryScreen(),
-    const ProfileManagementScreen(),
-  ];
+  late final List<Widget> _screens;
+  
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      PoliceHomeContent(userData: widget.userData),
+      const AlertHistoryScreen(),
+      ProfileManagementScreen(userData: widget.userData),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,13 +60,35 @@ class _PoliceHomeScreenState extends State<PoliceHomeScreen> {
 }
 
 class PoliceHomeContent extends StatelessWidget {
-  const PoliceHomeContent({super.key});
+  final Map<String, dynamic> userData;
+  
+  const PoliceHomeContent({super.key, required this.userData});
 
   @override
   Widget build(BuildContext context) {
+    final String userName = userData['name'] ?? 'Officer';
+    final String? profileImageUrl = userData['profileImageUrl'];
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Police Dashboard'),
+        title: Text('Welcome, $userName'),
+        actions: [
+          if (profileImageUrl != null)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: CircleAvatar(
+                backgroundImage: NetworkImage(profileImageUrl),
+              ),
+            )
+          else
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: CircleAvatar(
+                backgroundColor: Colors.blue,
+                child: Icon(Icons.person, color: Colors.white),
+              ),
+            ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
