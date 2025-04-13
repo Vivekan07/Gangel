@@ -253,4 +253,91 @@ class UserService {
       return null;
     }
   }
+
+  // Create user with provided data and ID
+  Future<DocumentReference> createUserWithData(Map<String, dynamic> userData) async {
+    print('------- UserService.createUserWithData started -------');
+    
+    try {
+      final String userId = userData['id'];
+      if (userId == null || userId.isEmpty) {
+        throw Exception('User ID is required');
+      }
+
+      print('Using provided userId: $userId');
+      
+      // Save to Firestore with timeout
+      print('Attempting to save to Firestore collection "users", document: $userId');
+      try {
+        await _firestore.collection('users').doc(userId).set(userData)
+          .timeout(const Duration(seconds: 15));
+        print('✓ User data successfully saved to Firestore');
+      } catch (e) {
+        if (e is TimeoutException) {
+          print('⚠️ Firestore set operation timed out after 15 seconds');
+          throw Exception('Firestore document creation timed out');
+        }
+        rethrow;
+      }
+
+      // Handle profile image upload if path exists
+      if (userData['profileImagePath'] != null && userData['profileImagePath'].isNotEmpty) {
+        final imageFile = File(userData['profileImagePath']);
+        if (imageFile.existsSync()) {
+          try {
+            print('Starting profile image upload...');
+            final profileImageUrl = await uploadProfileImage(userId, imageFile);
+            if (profileImageUrl != null) {
+              await _firestore.collection('users').doc(userId).update({
+                'profileImageUrl': profileImageUrl,
+              });
+              print('✓ Profile image URL saved to Firestore');
+            }
+          } catch (e) {
+            print('⚠️ Error uploading profile image: $e');
+            // Continue without failing - we've already created the user
+          }
+        }
+      }
+      
+      print('------- UserService.createUserWithData completed successfully -------');
+      return _firestore.collection('users').doc(userId);
+    } catch (e) {
+      print('❌ ERROR creating user: $e');
+      print('Stack trace: ${StackTrace.current}');
+      rethrow;
+    }
+  }
+
+  // Get user by email
+  Future<Map<String, dynamic>?> getUserByEmail(String email) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .get();
+      
+      if (querySnapshot.docs.isNotEmpty) {
+        return querySnapshot.docs.first.data();
+      }
+      return null;
+    } catch (e) {
+      print('Error getting user by email: $e');
+      rethrow;
+    }
+  }
+
+  // Get user by ID
+  Future<Map<String, dynamic>?> getUserById(String userId) async {
+    try {
+      final docSnapshot = await _firestore.collection('users').doc(userId).get();
+      if (docSnapshot.exists) {
+        return docSnapshot.data();
+      }
+      return null;
+    } catch (e) {
+      print('Error getting user by ID: $e');
+      rethrow;
+    }
+  }
 } 

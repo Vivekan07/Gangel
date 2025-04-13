@@ -6,8 +6,13 @@ import '../../services/storage_service.dart';
 
 class ProfileManagementScreen extends StatefulWidget {
   final Map<String, dynamic> userData;
+  final String guardianId;
   
-  const ProfileManagementScreen({super.key, required this.userData});
+  const ProfileManagementScreen({
+    super.key,
+    required this.userData,
+    required this.guardianId,
+  });
 
   @override
   State<ProfileManagementScreen> createState() => _ProfileManagementScreenState();

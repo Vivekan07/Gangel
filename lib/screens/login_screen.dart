@@ -60,6 +60,10 @@ class _LoginPageState extends State<LoginPage> {
       final userDoc = querySnapshot.docs.first;
       final userData = userDoc.data();
       
+      // Add the document ID to the user data
+      userData['id'] = userDoc.id;
+      print('User ID: ${userDoc.id}'); // Debug print
+      
       // Check if password matches
       if (userData['password'] != _passwordController.text) {
         print('Password does not match');
@@ -74,7 +78,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
       
-      print('User found: ${userData['name']}');
+      print('User found: ${userData['name']} (ID: ${userData['id']})');
       
       // Navigate to the appropriate home screen based on user type
       if (mounted) {
@@ -100,6 +104,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _navigateToHomeScreen(Map<String, dynamic> userData) {
+    print('Navigating to home screen with user data: $userData'); // Debug print
+    
     Widget homeScreen;
     switch (_selectedUserType) {
       case 'Women':
@@ -115,9 +121,10 @@ class _LoginPageState extends State<LoginPage> {
         homeScreen = WomenHomeScreen(userData: userData);
     }
 
-    Navigator.pushReplacement(
+    Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => homeScreen),
+      (route) => false, // This removes all previous routes
     );
   }
 

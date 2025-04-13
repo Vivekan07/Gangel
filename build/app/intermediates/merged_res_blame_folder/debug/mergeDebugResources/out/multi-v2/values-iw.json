@@ -21,7 +21,7 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\Venus Pc\\.gradle\\caches\\8.10.2\\transforms\\80d381bf084c21e18706da6716588126\\transformed\\jetified-play-services-base-18.1.0\\res\\values-iw\\values.xml",
+                    "source": "C:\\Users\\Venus Pc\\.gradle\\caches\\8.10.2\\transforms\\9db9b81a577112600e8d2ee7b5450923\\transformed\\jetified-play-services-base-18.3.0\\res\\values-iw\\values.xml",
                     "from": {
                         "startLines": "4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20",
                         "startColumns": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
@@ -38,7 +38,7 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\Venus Pc\\.gradle\\caches\\8.10.2\\transforms\\f8742dbdd8ad548bbf5dde49a0ea9a7d\\transformed\\browser-1.4.0\\res\\values-iw\\values-iw.xml",
+                    "source": "C:\\Users\\Venus Pc\\.gradle\\caches\\8.10.2\\transforms\\308a2e77faa557d0bd706972416bde6a\\transformed\\browser-1.8.0\\res\\values-iw\\values-iw.xml",
                     "from": {
                         "startLines": "2,3,4,5",
                         "startColumns": "4,4,4,4",

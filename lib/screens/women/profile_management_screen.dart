@@ -1,8 +1,5 @@
-   import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../services/user_service.dart';
-import '../../services/storage_service.dart';
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfileManagementScreen extends StatefulWidget {
@@ -17,10 +14,6 @@ class ProfileManagementScreen extends StatefulWidget {
 class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
   final _formKey = GlobalKey<FormState>();
   final _userService = UserService();
-  final _storageService = StorageService();
-  final _imagePicker = ImagePicker();
-  File? _profileImage;
-  String? _profileImageUrl;
   bool _isLoading = false;
   
   final _nameController = TextEditingController();
@@ -39,7 +32,6 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
     _emailController.text = widget.userData['email'] ?? '';
     _phoneController.text = widget.userData['phone'] ?? '';
     _addressController.text = widget.userData['address'] ?? '';
-    _profileImageUrl = widget.userData['profileImageUrl'];
   }
 
   @override
@@ -49,56 +41,6 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
     _phoneController.dispose();
     _addressController.dispose();
     super.dispose();
-  }
-
-  void _showImagePicker() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Take Photo'),
-              onTap: () async {
-                Navigator.pop(context);
-                final XFile? image = await _imagePicker.pickImage(
-                  source: ImageSource.camera,
-                  maxWidth: 512,
-                  maxHeight: 512,
-                  imageQuality: 75,
-                );
-                if (image != null && mounted) {
-                  setState(() {
-                    _profileImage = File(image.path);
-                  });
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Choose from Gallery'),
-              onTap: () async {
-                Navigator.pop(context);
-                final XFile? image = await _imagePicker.pickImage(
-                  source: ImageSource.gallery,
-                  maxWidth: 512,
-                  maxHeight: 512,
-                  imageQuality: 75,
-                );
-                if (image != null && mounted) {
-                  setState(() {
-                    _profileImage = File(image.path);
-                  });
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showEmergencyContactsScreen() {
@@ -119,7 +61,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Change Password'),
+          title: const Text('Change Password'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -127,17 +69,19 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                 TextField(
                   controller: currentPasswordController,
                   obscureText: true,
-                  decoration: InputDecoration(labelText: 'Current Password'),
+                  decoration: const InputDecoration(labelText: 'Current Password'),
                 ),
+                const SizedBox(height: 16),
                 TextField(
                   controller: newPasswordController,
                   obscureText: true,
-                  decoration: InputDecoration(labelText: 'New Password'),
+                  decoration: const InputDecoration(labelText: 'New Password'),
                 ),
+                const SizedBox(height: 16),
                 TextField(
                   controller: confirmPasswordController,
                   obscureText: true,
-                  decoration: InputDecoration(labelText: 'Confirm New Password'),
+                  decoration: const InputDecoration(labelText: 'Confirm New Password'),
                 ),
               ],
             ),
@@ -145,14 +89,14 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () async {
                 // Validate password match
                 if (newPasswordController.text != confirmPasswordController.text) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('New passwords do not match')),
+                    const SnackBar(content: Text('New passwords do not match')),
                   );
                   return;
                 }
@@ -160,7 +104,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                 // Validate password length
                 if (newPasswordController.text.length < 6) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Password must be at least 6 characters')),
+                    const SnackBar(content: Text('Password must be at least 6 characters')),
                   );
                   return;
                 }
@@ -174,7 +118,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                   
                   if (!userDoc.exists) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('User not found')),
+                      const SnackBar(content: Text('User not found')),
                     );
                     return;
                   }
@@ -185,29 +129,32 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                   // Verify current password
                   if (storedPassword != currentPasswordController.text) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Current password is incorrect')),
+                      const SnackBar(content: Text('Current password is incorrect')),
                     );
                     return;
                   }
 
-                  // Update password
-                  await _userService.updateUserProfile(
-                    userId: widget.userData['id'],
-                    password: newPasswordController.text,
-                  );
+                  // Update password in Firestore
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(widget.userData['id'])
+                      .update({
+                    'password': newPasswordController.text,
+                    'updatedAt': FieldValue.serverTimestamp(),
+                  });
 
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Password updated successfully')),
+                    const SnackBar(content: Text('Password updated successfully')),
                   );
                 } catch (e) {
-                  print('Error updating password: $e');
+                  print('Error updating password: $e'); // Debug print
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to update password')),
+                    const SnackBar(content: Text('Failed to update password')),
                   );
                 }
               },
-              child: Text('Update'),
+              child: const Text('Update'),
             ),
           ],
         );
@@ -227,14 +174,17 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
       if (userId.isEmpty) {
         throw Exception('User ID not found');
       }
+
+      // Create update data map
+      final updateData = {
+        'name': _nameController.text,
+        'phone': _phoneController.text,
+        'address': _addressController.text,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
       
-      await _userService.updateUserProfile(
-        userId: userId,
-        name: _nameController.text,
-        phone: _phoneController.text,
-        address: _addressController.text,
-        profileImagePath: _profileImage?.path,
-      );
+      // Update user profile in Firestore
+      await FirebaseFirestore.instance.collection('users').doc(userId).update(updateData);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -242,6 +192,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
         );
       }
     } catch (e) {
+      print('Error updating profile: $e'); // Debug print
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error updating profile: $e')),
@@ -262,122 +213,122 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
       appBar: AppBar(
         title: const Text('Profile Management'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Colors.grey[200],
-                    child: _profileImage != null
-                        ? Image.file(
-                            _profileImage!,
-                            width: 120,
-                            height: 120,
-                            fit: BoxFit.cover,
-                          )
-                        : _profileImageUrl != null
-                            ? Image.network(
-                                _profileImageUrl!,
-                                width: 120,
-                                height: 120,
-                                fit: BoxFit.cover,
-                              )
-                            : const Icon(Icons.person, size: 80),
-                  ),
-                  FloatingActionButton.small(
-                    onPressed: _showImagePicker,
-                    child: const Icon(Icons.camera_alt),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Full Name',
-                  border: OutlineInputBorder(),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 24),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Personal Information',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _nameController,
+                              decoration: const InputDecoration(
+                                labelText: 'Full Name',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.person),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your name';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _emailController,
+                              enabled: false, // Email cannot be changed
+                              decoration: const InputDecoration(
+                                labelText: 'Email',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.email),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _phoneController,
+                              decoration: const InputDecoration(
+                                labelText: 'Phone Number',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.phone),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your phone number';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _addressController,
+                              decoration: const InputDecoration(
+                                labelText: 'Address',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.location_on),
+                              ),
+                              maxLines: 3,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your address';
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Card(
+                      child: Column(
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.security),
+                            title: const Text('Emergency Contacts'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: _showEmergencyContactsScreen,
+                          ),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: const Icon(Icons.lock),
+                            title: const Text('Change Password'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: _showChangePasswordDialog,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: _isLoading ? null : _saveProfile,
+                      icon: const Icon(Icons.save),
+                      label: const Text('Save Changes'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.all(16),
+                      ),
+                    ),
+                  ],
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your name';
-                  }
-                  return null;
-                },
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your email';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Please enter a valid email';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your phone number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _addressController,
-                decoration: const InputDecoration(
-                  labelText: 'Address',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your address';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              ListTile(
-                leading: const Icon(Icons.security),
-                title: const Text('Emergency Contacts'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _showEmergencyContactsScreen,
-              ),
-              ListTile(
-                leading: const Icon(Icons.lock),
-                title: const Text('Change Password'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _showChangePasswordDialog,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _saveProfile,
-                child: const Text('Save Changes'),
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

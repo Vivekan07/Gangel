@@ -3,6 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'screens/landing_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/women_home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -79,7 +81,11 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const LandingPage(),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const LandingPage(),
+        '/login': (context) => const LoginPage(),
+      },
     );
   }
 }

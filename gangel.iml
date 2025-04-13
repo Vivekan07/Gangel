@@ -13,5 +13,9 @@
     <orderEntry type="library" name="Dart SDK" level="project" />
     <orderEntry type="library" name="Flutter Plugins" level="project" />
     <orderEntry type="library" name="Dart Packages" level="project" />
+    <uses-permission android:name="android.permission.INTERNET"/>
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+<uses-permission android:name="android.permission.CAMERA" />
   </component>
 </module>

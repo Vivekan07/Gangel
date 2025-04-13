@@ -317,7 +317,11 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                     leading: const Icon(Icons.logout),
                     title: const Text('Logout'),
                     onTap: () {
-                      Navigator.of(context).popUntil((route) => route.isFirst);
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        '/login',
+                        (route) => false,
+                      );
                     },
                   ),
                   ListTile(
